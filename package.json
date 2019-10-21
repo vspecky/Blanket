@@ -1,0 +1,15 @@
+{
+    "name": "blanket",
+    "version": "0.4.0",
+    "description": "",
+    "main": "shell.js",
+    "scripts": {
+        "start": "node shell"
+    },
+    "keywords": [],
+    "author": "vSpecky",
+    "license": "MIT",
+    "dependencies": {
+        "readline": "^1.3.0"
+    }
+}
