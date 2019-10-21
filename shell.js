@@ -9,7 +9,9 @@ const rl = readline.createInterface({
 const prompt = () => {
     return new Promise((resolve, reject) => {
         rl.question("Blanket >>| ", res => {
-            console.log("\n", parse(res), "\n");
+            const result = parse(res);
+            if (result.error) console.log("\n", result.error.log(), "\n");
+            else console.log("\n", result.value, "\n");
             resolve();
         });
     });

@@ -622,6 +622,26 @@ class BinaryNode {
 }
 
 /**
+ * If/Elif/Else statements Class.
+ *
+ * @class IfNode
+ */
+class IfNode {
+    /**
+     * Creates an instance of IfNode.
+     * @param {If/Elif Cases} cases
+     * @param {Else Case} [elseCase=null]
+     * @memberof IfNode
+     */
+    constructor(cases, elseCase = null) {
+        this.cases = cases;
+        this.elseCase = elseCase;
+        this.posStart = this.cases[0][0].posStart;
+        this.posEnd = (this.elseCase || this.cases[this.cases.length - 1][1]).posEnd;
+    }
+}
+
+/**
  * Main Parser for Blanket.
  *
  * @class BlanketParser
@@ -676,6 +696,90 @@ class BlanketParser {
         return this.tokens[this.tokIdx + 1];
     }
 
+    /**
+     * Gets an if/elif/else expression.
+     *
+     * @returns
+     * @memberof BlanketParser
+     */
+    ifExpression() {
+        const res = new ParseErrHandler();
+        const cases = [];
+        let elseCase = null;
+
+        if (!this.current().matches("KEYW", "if"))
+            return res.failure(
+                new SyntaxError({
+                    message: "Expected an 'if'",
+                    posStart: this.current().posStart,
+                    posEnd: this.current().posEnd
+                })
+            );
+
+        res.regConsume();
+        this.consume();
+
+        const condition = res.register(this.getExpression());
+        if (res.error) return res;
+
+        if (!this.current().matches("KEYW", "then"))
+            return res.failure(
+                new SyntaxError({
+                    message: "Expected a 'then'",
+                    posStart: this.current().posStart,
+                    posEnd: this.current().posEnd
+                })
+            );
+
+        res.regConsume();
+        this.consume();
+
+        const expression = res.register(this.getExpression());
+        if (res.error) return res;
+
+        cases.push([condition, expression]);
+
+        while (this.current().matches("KEYW", "then")) {
+            res.regConsume();
+            this.consume();
+
+            const condition = res.register(this.getExpression());
+            if (res.error) return res;
+
+            if (!this.current().matches("KEYW", "then"))
+                return res.failure(
+                    new SyntaxError({
+                        message: "Expected a 'then'",
+                        posStart: this.current().posStart,
+                        posEnd: this.current().posEnd
+                    })
+                );
+
+            res.regConsume();
+            this.consume();
+
+            const expression = res.register(this.getExpression());
+            if (res.error) return res;
+            cases.push([condition, expression]);
+        }
+
+        if (this.current().matches("KEYW", "else")) {
+            res.regConsume();
+            this.consume();
+
+            elseCase = res.register(this.getExpression());
+            if (res.error) return res;
+        }
+
+        return res.success(new IfNode(cases, elseCase));
+    }
+
+    /**
+     * Parses an atomic expression and returns the respective node.
+     *
+     * @returns
+     * @memberof BlanketParser
+     */
     parseAtom() {
         const res = new ParseErrHandler();
         const tok = this.current();
@@ -1401,6 +1505,29 @@ class BlanketInterpreter {
 
         context.symbolTable.set(sclrName, value);
         return res.success(value);
+    }
+
+    visitIfNode(node, context) {
+        const res = new RTErrHandler();
+
+        for (let [condition, expression] of node.cases) {
+            const condValue = res.register(this.visit(condition, context));
+            if (res.error) return res;
+
+            if (condValue) {
+                const exprValue = res.register(this.visit(expression, context));
+                if (res.error) return res;
+                else return res.success(exprValue);
+            }
+        }
+
+        if (node.elseCase) {
+            const elseValue = res.register(this.visit(node.elseCase, context));
+            if (res.error) return res;
+            else return res.success(elseValue);
+        }
+
+        return res.success(null);
     }
 }
 
