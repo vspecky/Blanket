@@ -1507,6 +1507,14 @@ class BlanketInterpreter {
         return res.success(value);
     }
 
+    /**
+     * Interprets an if/then/else statement
+     *
+     * @param {IfNode} node
+     * @param {Context} context
+     * @returns if/then/else result
+     * @memberof BlanketInterpreter
+     */
     visitIfNode(node, context) {
         const res = new RTErrHandler();
 
